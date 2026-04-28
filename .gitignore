@@ -1,0 +1,21 @@
+# OS generated files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editor and IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Common build outputs
+build/
+dist/
+out/
+bin/
+obj/
+
