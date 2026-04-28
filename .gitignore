@@ -19,3 +19,10 @@ out/
 bin/
 obj/
 
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+

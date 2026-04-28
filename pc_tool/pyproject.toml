@@ -1,0 +1,18 @@
+[project]
+name = "tcp-bootload-host"
+version = "0.1.0"
+description = "PC host tool for STM32 + W5500 bootload over Ethernet"
+readme = "../README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "PyQt6>=6.7.0",
+  "pymodbus>=3.6.0",
+  "loguru>=0.7.2",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
