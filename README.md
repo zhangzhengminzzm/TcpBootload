@@ -18,7 +18,8 @@ TcpBootload/
 │  ├─ 10-总体架构.md
 │  ├─ 20-通信与升级协议框架.md
 │  ├─ 30-上位机软件架构-Python-PyQt.md
-│  └─ 40-开发计划与里程碑.md
+│  ├─ 40-开发计划与里程碑.md
+│  └─ 50-Bootload传输协议详细设计.md
 └─ pc_tool/                      # Python 上位机工程
    ├─ pyproject.toml
    ├─ requirements.txt
@@ -49,8 +50,24 @@ TcpBootload/
    - `python -m venv .venv`
    - `.venv\Scripts\activate`
    - `pip install -r requirements.txt`
-3. 启动程序：`python -m tcp_bootload_host.main`
-4. 或一键启动：在 `pc_tool` 目录执行 `powershell -ExecutionPolicy Bypass -File .\run.ps1`
+3. 一键启动：在 `pc_tool` 目录执行 `powershell -ExecutionPolicy Bypass -File .\run.ps1`
+4. 手动启动：先执行 `pip install -e .`，再执行 `python -m tcp_bootload_host.main`
+
+## 打包 EXE
+
+在 `pc_tool` 目录执行：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\build_exe.ps1
+```
+
+生成目录：
+
+```text
+release/TcpBootloadHost/TcpBootloadHost.exe
+```
+
+发布到其他 Windows 机器时，拷贝整个 `release/TcpBootloadHost` 文件夹。
 
 ## 文档阅读顺序
 
@@ -58,3 +75,11 @@ TcpBootload/
 2. `docs/20-通信与升级协议框架.md`
 3. `docs/30-上位机软件架构-Python-PyQt.md`
 4. `docs/40-开发计划与里程碑.md`
+5. `docs/50-Bootload传输协议详细设计.md`
+
+## 当前 BOOT 命令寄存器
+
+- 类型：Modbus 保持寄存器
+- 协议地址：`0x0100`（十进制 `256`）
+- 40001 风格显示地址：`40257`
+- 写入命令值：`0xB007`

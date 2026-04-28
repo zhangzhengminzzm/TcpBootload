@@ -7,3 +7,9 @@ class FirmwareMeta:
     size: int
     crc32: str
 
+
+@dataclass
+class OperationResult:
+    success: bool
+    message: str
+
