@@ -51,7 +51,7 @@ Value:            0xB007
 
 MCU 收到后执行：
 
-1. `Bootload_Platform_SetBootRequest`
+1. `Bootload_Platform_SetBootRequest`，向 Flash 标识区写入升级模式 `0xB007B007`
 2. 设置状态 `BOOT_STATUS_BUSY`
 3. `Bootload_Platform_Reset`
 
@@ -86,16 +86,21 @@ Bootload_Task();
 
 ```text
 Bootloader: 0x08000000 ~ 0x0801FFFF
-App:        0x08020000 ~ 0x080FFFFF
+App:        0x08020000 ~ 0x080DFFFF
+Boot Flag:  0x080E0000 ~ 0x080FFFFF
 ```
 
 也就是 App 起始地址：
 
 ```c
 #define BOOT_APP_START_ADDR 0x08020000UL
+#define BOOT_FLAG_ADDR      0x080E0000UL
+#define BOOT_APP_END_ADDR   BOOT_FLAG_ADDR
 ```
 
 STM32F407VGT6 Flash 总容量按 `1 MB` 规划。
+
+`Boot Flag` 默认独立占用 STM32F407 的 Sector 11。因为 STM32F4 Flash 只能整扇区擦除，所以该扇区不能放 Bootloader 或 App 代码。
 
 若你的 Bootloader 大小不是 `128 KB`，需要同步修改：
 
@@ -103,6 +108,7 @@ STM32F407VGT6 Flash 总容量按 `1 MB` 规划。
 - App 链接脚本
 - `BOOT_APP_START_ADDR`
 - `BOOT_APP_END_ADDR`
+- `BOOT_FLAG_ADDR`
 
 ## 7. 固件传输流程
 
@@ -131,7 +137,7 @@ STM32F407VGT6 Flash 总容量按 `1 MB` 规划。
 | `ERASE_APP` | `0xB102` | 擦除 App Flash 区 |
 | `TRANSFER_PACKET` | `0xB103` | 校验当前包 CRC 并写入 Flash |
 | `VERIFY_IMAGE` | `0xB104` | 校验完整 App CRC |
-| `ACTIVATE_IMAGE` | `0xB105` | 清除 Boot 请求并复位 |
+| `ACTIVATE_IMAGE` | `0xB105` | 写入工作模式 `0x000000AA` 并复位 |
 | `ABORT` | `0xB1FF` | 中止升级并回到空闲 |
 
 ## 9. 平台适配函数
@@ -163,6 +169,8 @@ void Bootload_Platform_ActivateApplication(void);
 
 - App 工程的 `SCB->VTOR` 必须配置为 `0x08020000`。
 - App 链接地址必须从 `0x08020000` 开始。
+- App 工程需要避开 `BOOT_FLAG_ADDR` 所在 Flash 扇区，默认不要使用 `0x080E0000 ~ 0x080FFFFF`。
 - Bootloader 和 App 的中断向量表不能重叠。
 - 固件 CRC 与上位机保持一致，使用标准 CRC32 多项式 `0xEDB88320`。
-- 当前 Boot 请求标志参考实现放在 SRAM 固定地址，量产建议改为 RTC Backup Register 或 Backup SRAM。
+- Boot 请求标志当前放在 Flash 固定地址：升级模式 `0xB007B007`，工作模式 `0x000000AA`。
+- 升级校验成功后，`ACTIVATE_IMAGE` 会把 APP 对应的 boot_flag 写成工作模式 `0xAA`，然后复位进入 APP。

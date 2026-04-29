@@ -1,6 +1,6 @@
 from pymodbus.client import ModbusTcpClient
 
-from tcp_bootload_host.model.dto import OperationResult
+from tcp_bootload_host.model.dto import OperationResult, RegisterReadResult
 
 
 class ModbusClientAdapter:
@@ -86,4 +86,78 @@ class ModbusClientAdapter:
         return OperationResult(
             True,
             f"Wrote holding register 0x{address:04X} = 0x{value:04X}",
+        )
+
+    def write_holding_registers(
+        self,
+        address: int,
+        values: list[int],
+        device_id: int,
+    ) -> OperationResult:
+        """Write multiple contiguous Modbus holding registers using function 0x10.
+
+        Args:
+            address: Zero-based Modbus protocol address of the first register.
+            values: Unsigned 16-bit values to write.
+            device_id: Modbus Unit ID used by the MCU stack.
+
+        Returns:
+            ``OperationResult`` containing either the write confirmation or the
+            Modbus/transport error text.
+        """
+        if not self._client or not self._client.connected:
+            return OperationResult(False, "Modbus TCP is not connected")
+
+        try:
+            response = self._client.write_registers(
+                address,
+                values,
+                device_id=device_id,
+            )
+        except Exception as exc:
+            return OperationResult(False, f"Write holding registers failed: {exc}")
+
+        if response.isError():
+            return OperationResult(False, f"Modbus exception: {response}")
+
+        return OperationResult(
+            True,
+            f"Wrote {len(values)} holding registers from 0x{address:04X}",
+        )
+
+    def read_holding_registers(
+        self,
+        address: int,
+        count: int,
+        device_id: int,
+    ) -> RegisterReadResult:
+        """Read one or more Modbus holding registers using function 0x03.
+
+        Args:
+            address: Zero-based Modbus protocol address of the first register.
+            count: Number of contiguous holding registers to read.
+            device_id: Modbus Unit ID used by the MCU stack.
+
+        Returns:
+            ``RegisterReadResult`` containing the register values or error text.
+        """
+        if not self._client or not self._client.connected:
+            return RegisterReadResult(False, "Modbus TCP is not connected", [])
+
+        try:
+            response = self._client.read_holding_registers(
+                address,
+                count=count,
+                device_id=device_id,
+            )
+        except Exception as exc:
+            return RegisterReadResult(False, f"Read holding registers failed: {exc}", [])
+
+        if response.isError():
+            return RegisterReadResult(False, f"Modbus exception: {response}", [])
+
+        return RegisterReadResult(
+            True,
+            f"Read {count} holding registers from 0x{address:04X}",
+            list(response.registers),
         )

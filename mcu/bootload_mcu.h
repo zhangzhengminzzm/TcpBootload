@@ -32,6 +32,9 @@
 #define BOOT_REG_DATA_COUNT                  120U
 #define BOOT_PACKET_BYTES_MAX                (BOOT_REG_DATA_COUNT * 2U)
 
+#define BOOT_FLAG_UPGRADE_MODE               0xB007B007UL
+#define BOOT_FLAG_WORKING_MODE               0x000000AAUL
+
 #define BOOT_CMD_ENTER_BOOTLOADER            0xB007U
 #define BOOT_CMD_SESSION_START               0xB101U
 #define BOOT_CMD_ERASE_APP                   0xB102U
@@ -59,97 +62,95 @@
 #define BOOT_ERR_VERSION_REJECTED            0x0009U
 
 /**
- * @brief Initialize Bootload protocol state using the Modbus holding-register mirror.
- * @param holding_regs Pointer to the holding-register array used by Modbus TCP.
- * @param holding_count Number of valid entries in holding_regs.
+ * @brief 初始化 Bootload 协议状态机，并绑定 Modbus 保持寄存器镜像区。
+ * @param holding_regs Modbus TCP 使用的保持寄存器数组指针。
+ * @param holding_count holding_regs 中可访问的寄存器数量。
  */
 void Bootload_Init(uint16_t *holding_regs, uint16_t holding_count);
 
 /**
- * @brief Run periodic Bootloader logic from the main loop.
- * @details Jumps to the App when no Boot request is pending and the App vector
- *          table is valid.
+ * @brief Bootload 周期任务，需要在主循环中持续调用。
+ * @details 当没有 Boot 请求且 APP 向量表有效时，本函数会跳转到 APP。
  */
 void Bootload_Task(void);
 
 /**
- * @brief Notify Bootload logic after holding registers are written.
- * @param start_addr First holding-register address written by Modbus.
- * @param quantity Number of registers written.
+ * @brief 通知 Bootload 逻辑：保持寄存器已经被 Modbus 写入。
+ * @param start_addr 本次写入的第一个保持寄存器地址。
+ * @param quantity 本次写入的保持寄存器数量。
  */
 void Bootload_OnHoldingWrite(uint16_t start_addr, uint16_t quantity);
 
 /**
- * @brief Request a delayed platform reset from Bootload_Task.
- * @details Use this when a Modbus command should be acknowledged before reset.
+ * @brief 请求在 Bootload_Task 中执行延时复位。
+ * @details 用于需要先回复 Modbus 写命令，再进行 MCU 复位的场景。
  */
 void Bootload_RequestReset(void);
 
 /**
- * @brief Reset the MCU.
+ * @brief 执行 MCU 复位。
  */
 void Bootload_Platform_Reset(void);
 
 /**
- * @brief Optional platform hook called before delayed reset execution.
- * @details HAL ports may use this hook to delay a few milliseconds so TCP data
- *          has time to leave the W5500 before NVIC reset.
+ * @brief 复位前的平台钩子函数。
+ * @details HAL 移植层可在此延时数毫秒，确保 W5500 有时间把 TCP 应答发出后再复位。
  */
 void Bootload_Platform_BeforeReset(void);
 
 /**
- * @brief Store a marker indicating the next boot should stay in Bootloader mode.
+ * @brief 向 Flash boot_flag 写入升级模式，表示下次启动应停留在 Bootloader。
  */
 void Bootload_Platform_SetBootRequest(void);
 
 /**
- * @brief Clear the Bootloader request marker.
+ * @brief 向 Flash boot_flag 写入工作模式，允许下次启动进入 APP。
  */
 void Bootload_Platform_ClearBootRequest(void);
 
 /**
- * @brief Check whether Bootloader mode was requested.
- * @return 1 if Bootloader mode is requested, otherwise 0.
+ * @brief 查询 Flash boot_flag 是否要求停留在 Bootloader。
+ * @return 返回 1 表示需要停留在 Bootloader，返回 0 表示不需要。
  */
 uint8_t Bootload_Platform_IsBootRequested(void);
 
 /**
- * @brief Check whether the application image has a valid vector table.
- * @return 1 if the application can be jumped to, otherwise 0.
+ * @brief 检查 APP 镜像向量表是否合法。
+ * @return 返回 1 表示 APP 可跳转，返回 0 表示 APP 无效。
  */
 uint8_t Bootload_Platform_IsApplicationValid(void);
 
 /**
- * @brief Jump from Bootloader to application firmware.
+ * @brief 从 Bootloader 跳转到 APP 固件。
  */
 void Bootload_Platform_JumpToApplication(void);
 
 /**
- * @brief Erase the Flash range used by the incoming application image.
- * @param image_size Incoming firmware size in bytes.
- * @return 1 on success, otherwise 0.
+ * @brief 擦除即将写入 APP 镜像的 Flash 区域。
+ * @param image_size 上位机下发的固件镜像大小，单位为字节。
+ * @return 返回 1 表示擦除成功，返回 0 表示擦除失败。
  */
 uint8_t Bootload_Platform_EraseApplication(uint32_t image_size);
 
 /**
- * @brief Program one packet into application Flash.
- * @param offset Byte offset from the application base address.
- * @param data Pointer to packet bytes.
- * @param length Number of valid bytes in data.
- * @return 1 on success, otherwise 0.
+ * @brief 将一个升级数据包写入 APP Flash 区域。
+ * @param offset 相对 APP 起始地址的字节偏移。
+ * @param data 升级数据包缓存指针。
+ * @param length data 中有效数据长度，单位为字节。
+ * @return 返回 1 表示写入成功，返回 0 表示写入失败。
  */
 uint8_t Bootload_Platform_WriteApplication(uint32_t offset, const uint8_t *data, uint16_t length);
 
 /**
- * @brief Verify the complete application image after programming.
- * @param image_size Number of application bytes to verify.
- * @param expected_crc Host-provided CRC32 value.
- * @return 1 when verification succeeds, otherwise 0.
+ * @brief 对已经写入的完整 APP 镜像进行 CRC32 校验。
+ * @param image_size 需要校验的 APP 镜像长度，单位为字节。
+ * @param expected_crc 上位机给出的期望 CRC32 值。
+ * @return 返回 1 表示校验成功，返回 0 表示校验失败。
  */
 uint8_t Bootload_Platform_VerifyApplication(uint32_t image_size, uint32_t expected_crc);
 
 /**
- * @brief Mark the verified application image as active.
+ * @brief 将已经校验通过的 APP 镜像标记为可启动。
  */
 void Bootload_Platform_ActivateApplication(void);
 

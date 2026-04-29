@@ -10,10 +10,10 @@ static uint8_t s_reset_requested;
 static uint8_t s_packet_buf[BOOT_PACKET_BYTES_MAX];
 
 /**
- * @brief Combine two 16-bit Modbus registers into one unsigned 32-bit value.
- * @param high High 16 bits.
- * @param low Low 16 bits.
- * @return Combined 32-bit value.
+ * @brief 将两个 16 位 Modbus 寄存器组合为一个 32 位无符号数。
+ * @param high 32 位数据的高 16 位。
+ * @param low 32 位数据的低 16 位。
+ * @return 组合后的 32 位数据。
  */
 static uint32_t make_u32(uint16_t high, uint16_t low)
 {
@@ -21,10 +21,10 @@ static uint32_t make_u32(uint16_t high, uint16_t low)
 }
 
 /**
- * @brief Safely write one holding-register mirror value.
- * @param addr Zero-based holding register address.
- * @param value Value to store.
- * @note Writes outside the registered holding-register array are ignored.
+ * @brief 安全写入一个保持寄存器镜像值。
+ * @param addr 从 0 开始计数的保持寄存器地址。
+ * @param value 需要写入的寄存器值。
+ * @note 当地址超出已绑定的保持寄存器数组范围时，本函数会直接忽略。
  */
 static void set_reg(uint16_t addr, uint16_t value)
 {
@@ -35,9 +35,9 @@ static void set_reg(uint16_t addr, uint16_t value)
 }
 
 /**
- * @brief Safely read one holding-register mirror value.
- * @param addr Zero-based holding register address.
- * @return Register value, or 0 if the address is outside the configured array.
+ * @brief 安全读取一个保持寄存器镜像值。
+ * @param addr 从 0 开始计数的保持寄存器地址。
+ * @return 读取到的寄存器值；地址越界时返回 0。
  */
 static uint16_t get_reg(uint16_t addr)
 {
@@ -49,8 +49,8 @@ static uint16_t get_reg(uint16_t addr)
 }
 
 /**
- * @brief Update the Bootload status register.
- * @param status One of the BOOT_STATUS_* values.
+ * @brief 更新 Bootload 状态寄存器。
+ * @param status BOOT_STATUS_* 状态值之一。
  */
 static void set_status(uint16_t status)
 {
@@ -58,8 +58,8 @@ static void set_status(uint16_t status)
 }
 
 /**
- * @brief Update the Bootload error register and enter ERROR state if needed.
- * @param error One of the BOOT_ERR_* values. BOOT_ERR_NONE clears the error only.
+ * @brief 更新 Bootload 错误寄存器，必要时进入错误状态。
+ * @param error BOOT_ERR_* 错误值之一；BOOT_ERR_NONE 仅用于清除错误码。
  */
 static void set_error(uint16_t error)
 {
@@ -71,11 +71,11 @@ static void set_error(uint16_t error)
 }
 
 /**
- * @brief Calculate CRC32 using the standard Ethernet/ZIP polynomial.
- * @param crc Initial CRC seed, normally 0 for a fresh calculation.
- * @param data Pointer to bytes to include in the checksum.
- * @param len Number of valid bytes in data.
- * @return Final CRC32 value.
+ * @brief 使用标准 Ethernet/ZIP 多项式计算 CRC32。
+ * @param crc 初始 CRC 种子，新一轮计算通常传入 0。
+ * @param data 参与校验的数据指针。
+ * @param len data 中有效数据长度，单位为字节。
+ * @return 计算得到的最终 CRC32 值。
  */
 static uint32_t crc32_update(uint32_t crc, const uint8_t *data, uint32_t len)
 {
@@ -102,11 +102,11 @@ static uint32_t crc32_update(uint32_t crc, const uint8_t *data, uint32_t len)
 }
 
 /**
- * @brief Test whether a single register address was included in a write request.
- * @param start_addr First register written by the Modbus request.
- * @param quantity Number of registers written by the Modbus request.
- * @param addr Register address to test.
- * @return 1 if addr is inside the range, otherwise 0.
+ * @brief 判断某个寄存器地址是否包含在本次 Modbus 写入范围内。
+ * @param start_addr Modbus 请求写入的第一个寄存器地址。
+ * @param quantity Modbus 请求写入的寄存器数量。
+ * @param addr 需要判断的目标寄存器地址。
+ * @return 返回 1 表示目标地址在写入范围内，返回 0 表示不在范围内。
  */
 static uint8_t addr_in_range(uint16_t start_addr, uint16_t quantity, uint16_t addr)
 {
@@ -114,8 +114,8 @@ static uint8_t addr_in_range(uint16_t start_addr, uint16_t quantity, uint16_t ad
 }
 
 /**
- * @brief Initialize a firmware download session after metadata registers are set.
- * @details Resets packet counters and validates that IMAGE_SIZE is non-zero.
+ * @brief 在镜像元数据寄存器写入完成后，初始化一次固件下载会话。
+ * @details 本函数会检查 IMAGE_SIZE 是否非 0，并复位包序号和已写入长度计数器。
  */
 static void command_session_start(void)
 {
@@ -136,9 +136,8 @@ static void command_session_start(void)
 }
 
 /**
- * @brief Erase the configured application Flash region.
- * @details The platform layer decides which sectors/pages are affected based on
- *          the image size previously written by the host.
+ * @brief 擦除 APP 固件所在的 Flash 区域。
+ * @details 平台层会根据上位机写入的镜像大小，决定实际擦除哪些扇区或页。
  */
 static void command_erase_app(void)
 {
@@ -161,14 +160,14 @@ static void command_erase_app(void)
 }
 
 /**
- * @brief Validate and write the current firmware data packet.
- * @details Reads packet metadata and data from holding registers, checks packet
- *          order and packet CRC, then asks the platform layer to program Flash at
- *          the current image offset.
+ * @brief 校验并写入当前固件数据包。
+ * @details 本函数从保持寄存器读取包元数据和包内容，按包序号、长度和 CRC32 校验后，
+ *          再调用平台层把数据写入当前 APP Flash 偏移位置。
  */
 static void command_transfer_packet(void)
 {
     uint16_t i;
+    /* 步骤1：从保持寄存器读取包序号、包长度和本包 CRC32。 */
     uint32_t packet_index = make_u32(
         get_reg(BOOT_REG_PACKET_INDEX_H),
         get_reg(BOOT_REG_PACKET_INDEX_L));
@@ -178,18 +177,21 @@ static void command_transfer_packet(void)
         get_reg(BOOT_REG_PACKET_CRC_L));
     uint32_t actual_crc;
 
+    /* 步骤2：检查包序号是否等于 Bootload 当前期望序号，避免乱序或重复写入。 */
     if (packet_index != s_expected_packet_index)
     {
         set_error(BOOT_ERR_PACKET_INDEX);
         return;
     }
 
+    /* 步骤3：检查包长度是否为有效值，并且不能超过保持寄存器数据区容量。 */
     if ((packet_len == 0U) || (packet_len > BOOT_PACKET_BYTES_MAX))
     {
         set_error(BOOT_ERR_PACKET_LENGTH);
         return;
     }
 
+    /* 步骤4：将 Modbus 16 位寄存器中的高低字节拆包到连续字节缓存。 */
     for (i = 0; i < packet_len; i++)
     {
         uint16_t reg_value = get_reg((uint16_t)(BOOT_REG_DATA_START + (i / 2U)));
@@ -203,6 +205,7 @@ static void command_transfer_packet(void)
         }
     }
 
+    /* 步骤5：对本包数据计算 CRC32，并与上位机下发的 CRC32 比较。 */
     actual_crc = crc32_update(0U, s_packet_buf, packet_len);
     if (actual_crc != expected_crc)
     {
@@ -210,6 +213,7 @@ static void command_transfer_packet(void)
         return;
     }
 
+    /* 步骤6：CRC 通过后写入 Flash，并更新已写入长度和下一包期望序号。 */
     set_status(BOOT_STATUS_BUSY);
     if (Bootload_Platform_WriteApplication(s_written_size, s_packet_buf, packet_len))
     {
@@ -225,9 +229,8 @@ static void command_transfer_packet(void)
 }
 
 /**
- * @brief Verify the complete application image against the expected CRC32.
- * @details The platform layer reads Flash directly and compares against the
- *          IMAGE_CRC registers provided by the host.
+ * @brief 使用期望 CRC32 校验完整 APP 镜像。
+ * @details 平台层会直接读取 Flash 中的 APP 镜像，并与上位机写入的 IMAGE_CRC 比较。
  */
 static void command_verify_image(void)
 {
@@ -251,22 +254,21 @@ static void command_verify_image(void)
 }
 
 /**
- * @brief Mark the newly written image active and reset the MCU.
- * @details The default STM32F407 port clears the boot request flag, so the next
- *          boot can jump to the application if the vector table is valid.
+ * @brief 将新写入镜像标记为可启动，并请求 MCU 复位。
+ * @details 默认 STM32F407 移植层会把 Flash 中的 boot_flag 写为工作模式
+ *          BOOT_FLAG_WORKING_MODE，也就是 0x000000AA。下次启动时，如果
+ *          APP 向量表有效，Bootloader 将直接跳转到 APP。
  */
 static void command_activate_image(void)
 {
     Bootload_Platform_ActivateApplication();
-    Bootload_Platform_ClearBootRequest();
     Bootload_RequestReset();
 }
 
 /**
- * @brief Handle App-mode request to enter Bootloader mode.
- * @details Sets a platform boot-request marker and resets the MCU. In products
- *          that must acknowledge Modbus before reset, delay the reset in the
- *          platform layer or schedule it from the main loop.
+ * @brief 处理 APP 模式下进入 Bootloader 的请求。
+ * @details 写入平台 Boot 请求标识并请求复位。为了保证 Modbus 写命令能先应答，
+ *          实际复位会由 Bootload_Task 在主循环中延后执行。
  */
 static void command_enter_bootloader(void)
 {
@@ -276,11 +278,12 @@ static void command_enter_bootloader(void)
 }
 
 /**
- * @brief Dispatch one BOOT_COMMAND register value to the matching handler.
- * @param command Command word written by the host.
+ * @brief 根据 BOOT_COMMAND 寄存器的命令字分发到对应处理函数。
+ * @param command 上位机写入的 Bootload 命令字。
  */
 static void handle_command(uint16_t command)
 {
+    /* 步骤1：按命令字进入对应流程，所有命令均来自保持寄存器 BOOT_REG_COMMAND。 */
     switch (command)
     {
     case BOOT_CMD_ENTER_BOOTLOADER:
@@ -308,6 +311,7 @@ static void handle_command(uint16_t command)
         break;
 
     case BOOT_CMD_ABORT:
+        /* 步骤2：中止命令只复位会话计数器和状态，不主动擦除或改写 Flash。 */
         s_expected_packet_index = 0U;
         s_written_size = 0U;
         set_error(BOOT_ERR_NONE);
@@ -315,15 +319,16 @@ static void handle_command(uint16_t command)
         break;
 
     default:
+        /* 步骤3：未知命令统一进入错误状态，方便上位机读取错误码定位问题。 */
         set_error(BOOT_ERR_INVALID_COMMAND);
         break;
     }
 }
 
 /**
- * @brief Bind the Bootload state machine to the Modbus holding-register array.
- * @param holding_regs Pointer to the global holding-register mirror.
- * @param holding_count Number of registers available in the mirror.
+ * @brief 将 Bootload 状态机绑定到 Modbus 保持寄存器数组。
+ * @param holding_regs 全局保持寄存器镜像数组指针。
+ * @param holding_count 保持寄存器镜像数组中的可用寄存器数量。
  */
 void Bootload_Init(uint16_t *holding_regs, uint16_t holding_count)
 {
@@ -340,14 +345,14 @@ void Bootload_Init(uint16_t *holding_regs, uint16_t holding_count)
 }
 
 /**
- * @brief Periodic Bootloader task.
- * @details If there is no pending boot request and the application vector table
- *          looks valid, this function jumps to the application.
+ * @brief Bootloader 周期任务。
+ * @details 如果存在延时复位请求，则先执行复位；如果没有 Boot 请求且 APP 有效，则跳转到 APP。
  */
 void Bootload_Task(void)
 {
     if (s_reset_requested)
     {
+        /* 步骤1：先执行复位前钩子，给 W5500/TCP 应答留出发送时间。 */
         Bootload_Platform_BeforeReset();
         Bootload_Platform_Reset();
         while (1)
@@ -355,6 +360,7 @@ void Bootload_Task(void)
         }
     }
 
+    /* 步骤2：无 Boot 请求且 APP 向量表有效时，直接切换到 APP 执行。 */
     if (!Bootload_Platform_IsBootRequested() && Bootload_Platform_IsApplicationValid())
     {
         Bootload_Platform_JumpToApplication();
@@ -362,11 +368,10 @@ void Bootload_Task(void)
 }
 
 /**
- * @brief Notify Bootload logic that holding registers were written.
- * @param start_addr First written holding-register address.
- * @param quantity Number of written holding registers.
- * @details When the write range includes BOOT_REG_COMMAND, the command value is
- *          dispatched immediately.
+ * @brief 通知 Bootload：保持寄存器发生了写入。
+ * @param start_addr 本次写入的第一个保持寄存器地址。
+ * @param quantity 本次写入的保持寄存器数量。
+ * @details 当写入范围包含 BOOT_REG_COMMAND 时，会立即读取命令并执行对应流程。
  */
 void Bootload_OnHoldingWrite(uint16_t start_addr, uint16_t quantity)
 {
@@ -377,9 +382,8 @@ void Bootload_OnHoldingWrite(uint16_t start_addr, uint16_t quantity)
 }
 
 /**
- * @brief Schedule a reset to be performed from Bootload_Task.
- * @details This avoids resetting inside the Modbus write handler before the TCP
- *          server has a chance to send the write response.
+ * @brief 调度一次由 Bootload_Task 执行的延时复位。
+ * @details 避免在 Modbus 写寄存器回调内部立即复位，导致 TCP 写响应还未发送就断开。
  */
 void Bootload_RequestReset(void)
 {
