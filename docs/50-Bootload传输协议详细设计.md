@@ -43,7 +43,8 @@ display_address = 40001 + protocol_address
 | `0x010C` | `40269` | `IMAGE_CRC_L` | W | 固件 CRC32 低 16 位 |
 | `0x0200` | `40513` | `DATA_BUFFER_START` | W | 固件数据缓冲区起始地址 |
 
-数据缓冲区范围建议为 `0x0200 ~ 0x027F`，共 `128` 个保持寄存器，可承载 `256` 字节数据。
+数据缓冲区范围建议为 `0x0200 ~ 0x0277`，共 `120` 个保持寄存器，可承载 `240` 字节数据。
+选择 `120` 个寄存器是为了满足 Modbus `0x10` 单帧最多写 `123` 个保持寄存器的限制，并保留一定协议余量。
 
 ## 4. 命令字
 
@@ -95,7 +96,7 @@ display_address = 40001 + protocol_address
 7. 上位机轮询 `BOOT_STATUS`，等待 `READY`。
 8. 上位机向 `BOOT_COMMAND` 写入 `ERASE_APP`。
 9. 上位机轮询 `BOOT_STATUS`，等待 `READY`。
-10. 上位机按 `256` 字节切包，逐包写入数据区 `0x0200 ~ 0x027F`。
+10. 上位机按 `240` 字节切包，逐包写入数据区 `0x0200 ~ 0x0277`。
 11. 每包写入前设置 `PACKET_INDEX`、`PACKET_LENGTH`、`PACKET_CRC`。
 12. 每包写入后向 `BOOT_COMMAND` 写入 `TRANSFER_PACKET`。
 13. 上位机轮询 `BOOT_STATUS`，收到 `PACKET_OK` 后发送下一包。
@@ -136,4 +137,3 @@ register_value = (data[2*n] << 8) | data[2*n + 1]
   - 分包写入 `DATA_BUFFER`
   - `VERIFY_IMAGE`
   - `ACTIVATE_IMAGE`
-

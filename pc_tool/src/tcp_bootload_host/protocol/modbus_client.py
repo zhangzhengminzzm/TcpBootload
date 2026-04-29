@@ -4,14 +4,31 @@ from tcp_bootload_host.model.dto import OperationResult
 
 
 class ModbusClientAdapter:
+    """Small synchronous adapter around ``pymodbus`` TCP client operations."""
+
     def __init__(self) -> None:
+        """Initialize an adapter with no active TCP client."""
         self._client: ModbusTcpClient | None = None
 
     @property
     def connected(self) -> bool:
+        """Return whether the underlying TCP socket is currently connected."""
         return bool(self._client and self._client.connected)
 
     def connect(self, ip: str, port: int, timeout: float = 3.0) -> OperationResult:
+        """Open a Modbus TCP connection to the target device.
+
+        Any previous connection is closed before dialing the new endpoint so the UI
+        can safely reconnect without leaking sockets.
+
+        Args:
+            ip: Device IPv4 address or hostname.
+            port: Modbus TCP port, usually 502.
+            timeout: Socket timeout in seconds.
+
+        Returns:
+            ``OperationResult`` with a log-ready connection message.
+        """
         self.close()
         self._client = ModbusTcpClient(ip, port=port, timeout=timeout)
 
@@ -21,10 +38,18 @@ class ModbusClientAdapter:
         self.close()
         return OperationResult(False, f"TCP connect failed: {ip}:{port}")
 
-    def close(self) -> None:
+    def close(self) -> OperationResult:
+        """Close the active Modbus TCP connection if one exists.
+
+        Returns:
+            ``OperationResult`` indicating whether a socket was closed or the
+            adapter was already disconnected.
+        """
         if self._client:
             self._client.close()
             self._client = None
+            return OperationResult(True, "TCP disconnected")
+        return OperationResult(True, "TCP already disconnected")
 
     def write_holding_register(
         self,
@@ -32,6 +57,17 @@ class ModbusClientAdapter:
         value: int,
         device_id: int,
     ) -> OperationResult:
+        """Write one Modbus holding register using function code 0x06.
+
+        Args:
+            address: Zero-based Modbus protocol address of the holding register.
+            value: Unsigned 16-bit value to write.
+            device_id: Modbus Unit ID used by the MCU stack.
+
+        Returns:
+            ``OperationResult`` containing either the write confirmation or the
+            Modbus/transport error text.
+        """
         if not self._client or not self._client.connected:
             return OperationResult(False, "Modbus TCP is not connected")
 

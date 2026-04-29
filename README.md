@@ -19,7 +19,8 @@ TcpBootload/
 │  ├─ 20-通信与升级协议框架.md
 │  ├─ 30-上位机软件架构-Python-PyQt.md
 │  ├─ 40-开发计划与里程碑.md
-│  └─ 50-Bootload传输协议详细设计.md
+│  ├─ 50-Bootload传输协议详细设计.md
+│  └─ 60-MCU端Bootload移植说明.md
 └─ pc_tool/                      # Python 上位机工程
    ├─ pyproject.toml
    ├─ requirements.txt
@@ -76,6 +77,7 @@ release/TcpBootloadHost/TcpBootloadHost.exe
 3. `docs/30-上位机软件架构-Python-PyQt.md`
 4. `docs/40-开发计划与里程碑.md`
 5. `docs/50-Bootload传输协议详细设计.md`
+6. `docs/60-MCU端Bootload移植说明.md`
 
 ## 当前 BOOT 命令寄存器
 
